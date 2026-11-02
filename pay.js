@@ -9,9 +9,12 @@ module.exports = async (req, res) => {
     const user = u && u.user;
     if (!user) return res.status(401).json({ error: "Please log in first." });
 
-    const { course_id, phone } = req.body || {};
+    const { course_id, phone, name, email } = req.body || {};
     if (!/^01\d{9}$/.test(phone || "")) {
       return res.status(400).json({ error: "Enter a valid phone number like 01XXXXXXXXX." });
+    }
+    if (!name || !/^\S+@\S+\.\S+$/.test(email || "")) {
+      return res.status(400).json({ error: "Enter your name and a valid email." });
     }
 
     // price always comes from the database, never from the browser
@@ -38,9 +41,9 @@ module.exports = async (req, res) => {
     f.append("currency", "BDT");
     f.append("payment_amount", String(course.price));
     f.append("reference", course.title_en);
-    f.append("cust_name", (user.user_metadata && user.user_metadata.full_name) || "Student");
+    f.append("cust_name", String(name).slice(0, 80));
     f.append("cust_phone", phone);
-    f.append("cust_email", user.email);
+    f.append("cust_email", String(email).slice(0, 120));
     f.append("callback_url", site + "/api/callback");
 
     const r = await fetch("https://api.paystation.com.bd/initiate-payment", { method: "POST", body: f });

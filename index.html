@@ -119,7 +119,7 @@ img,iframe{max-width:100%}
 var SB_URL="https://yrdscpfzoisubgfokfib.supabase.co";
 var SB_KEY="sb_publishable_Q0sQmhTx9Xoo84Nqbnf38w_-n4krwf-";
 (function(){
-var lang="en",mode="login",flt="all",open=false,user=null,live=null,mine=[],pay=null,adm=false,AC=null,L={},sb=(window.supabase&&/^https?:/.test(SB_URL))?window.supabase.createClient(SB_URL,SB_KEY):null;
+var lang="en",mode="login",flt="all",open=false,user=null,live=null,mine=[],pay=null,adm=false,AC=null,L={},lerr="",ST=null,sb=(window.supabase&&/^https?:/.test(SB_URL))?window.supabase.createClient(SB_URL,SB_KEY):null;
 try{var s=localStorage.getItem("sl-lang");if(s==="bn"||s==="en")lang=s;}catch(e){}
 function T(e,b){return lang==="bn"?b:e;}
 var CATS=[["💼","Business","ব্যবসা",160],["💻","Freelancing","ফ্রিল্যান্সিং",210],["📣","Digital Marketing","ডিজিটাল মার্কেটিং",340],["🗣️","English & Skills","ইংরেজি ও স্কিল",30],["🖥️","Computer & IT","কম্পিউটার ও আইটি",250],["🎯","Career","ক্যারিয়ার",280]];
@@ -139,14 +139,15 @@ var h='<section><div class="wrap"><h2>'+T("My Courses","আমার কোর�
 if(!user)return h+'<p class="sub">'+T("Please log in to see your courses.","আপনার কোর্স দেখতে লগইন করুন।")+'</p><button class="btn" data-a="login">'+T("Log in","লগইন")+'</button></div></section>';
 var my=norm().filter(function(c){return c.id&&mine.indexOf(c.id)>-1;});
 return h+'<p class="sub">'+T("Welcome back.","স্বাগতম।")+'</p>'+(my.length?'<div class="g">'+my.map(card).join("")+'</div>':'<p>'+T("You have no courses yet. Start with a free course.","আপনার এখনো কোনো কোর্স নেই। একটি ফ্রি কোর্স দিয়ে শুরু করুন।")+'</p><a class="btn" href="#courses">'+T("Browse courses","কোর্স দেখুন")+'</a>')+'</div></section>';}
-function payHTML(){
-return '<button class="x" data-a="close" aria-label="Close">✕</button><h3 style="margin:0 0 8px">'+T(pay.e,pay.b)+' · ৳ '+pay.price+'</h3><p>'+T("Enter your mobile number. You will go to the secure payment page (bKash, Nagad, Rocket, card).","আপনার মোবাইল নম্বর দিন। এরপর নিরাপদ পেমেন্ট পেজে যাবেন (বিকাশ, নগদ, রকেট, কার্ড)।")+'</p><label>'+T("Mobile number","মোবাইল নম্বর")+'<input type="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label><button class="btn" style="width:100%" data-a="submit">'+T("Pay now","এখনই পেমেন্ট করুন")+'</button><p id="msg"></p>';}
+function esc(x){return String(x||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function payHTML(){var nm=(user&&user.user_metadata&&user.user_metadata.full_name)||"",em=(user&&user.email)||"";
+return '<button class="x" data-a="close" aria-label="Close">✕</button><h3 style="margin:0 0 8px">'+T(pay.e,pay.b)+' · ৳ '+pay.price+'</h3><p>'+T("Check your details. Next you choose bKash, Nagad, Rocket or card on the secure payment page.","আপনার তথ্য দিন। এরপর নিরাপদ পেমেন্ট পেজে বিকাশ, নগদ, রকেট বা কার্ড বেছে নেবেন।")+'</p><label>'+T("Full name","পুরো নাম")+'<input value="'+esc(nm)+'" autocomplete="name"></label><label>Email<input type="email" value="'+esc(em)+'" autocomplete="email"></label><label>'+T("Mobile number","মোবাইল নম্বর")+'<input type="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label><button class="btn" style="width:100%" data-a="submit">'+T("Continue to payment","পেমেন্টে যান")+'</button><p id="msg"></p>';}
 function doSubmit(){
 var d=document.getElementById("dlg"),ins=d.querySelectorAll("input"),msg=d.querySelector("#msg");
 if(!sb){msg.textContent=T("Not connected yet. Add the Supabase keys in index.html.","এখনো সংযুক্ত নয়। index.html-এ Supabase কী যোগ করুন।");return;}
-if(pay){var ph=ins[0].value.trim();msg.textContent="…";
+if(pay){var ph=ins[2].value.trim(),nm=ins[0].value.trim(),em=ins[1].value.trim();msg.textContent="…";
 sb.auth.getSession().then(function(x){var t=x.data.session&&x.data.session.access_token;
-return fetch("/api/pay",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({course_id:pay.id,phone:ph})});})
+return fetch("/api/pay",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({course_id:pay.id,phone:ph,name:nm,email:em})});})
 .then(function(r){return r.json();}).then(function(j){if(j.url){location.href=j.url;}else{msg.textContent=j.error||T("Payment error.","পেমেন্টে সমস্যা।");}})
 .catch(function(){msg.textContent=T("Network error.","নেটওয়ার্ক সমস্যা।");});return;}
 var l=mode==="login",em=ins[l?0:1].value.trim(),pw=ins[l?1:2].value;
@@ -157,11 +158,11 @@ if(!l&&!r.data.session){msg.textContent=T("Check your email to confirm your acco
 d.close();});}
 function loadData(){if(!sb)return;
 sb.from("courses").select("id,slug,title_en,title_bn,category,price").eq("published",true).order("created_at").then(function(r){
-if(!r.error&&r.data&&r.data.length){live=r.data.map(function(c){var k=0;CATS.forEach(function(x,i){if(x[1]===c.category)k=i;});return {id:c.id,e:c.title_en,b:c.title_bn,price:c.price,k:k};});try{localStorage.setItem("sl-c",JSON.stringify(live));}catch(e){}}
-if(!user){mine=[];adm=false;return;}
+if(r.error){lerr=r.error.message;}if(!r.error&&r.data){lerr="";live=r.data.map(function(c){var k=0;CATS.forEach(function(x,i){if(x[1]===c.category)k=i;});return {id:c.id,e:c.title_en,b:c.title_bn,price:c.price,k:k};});try{localStorage.setItem("sl-c",JSON.stringify(live));}catch(e){}}
+if(!user){mine=[];adm=false;ST=null;return;}
 return Promise.all([sb.from("enrollments").select("course_id"),sb.from("profiles").select("is_admin").eq("id",user.id)]).then(function(a){mine=a[0].data?a[0].data.map(function(x){return x.course_id;}):[];adm=!!(a[1].data&&a[1].data[0]&&a[1].data[0].is_admin);});
 }).then(render);}
-function grid(l){return l.length?l.map(card).join(""):'<p class="sub">'+(sb&&live===null?T("Loading…","লোড হচ্ছে…"):T("No courses yet.","এখনো কোনো কোর্স নেই।"))+'</p>';}
+function grid(l){return l.length?l.map(card).join(""):'<p class="sub">'+(lerr?T("Could not load courses: ","কোর্স লোড হয়নি: ")+lerr:sb&&live===null?T("Loading…","লোড হচ্ছে…"):T("No courses yet.","এখনো কোনো কোর্স নেই।"))+'</p>';}
 function embed(u){var m;
 if(m=u.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/))return "https://www.youtube.com/embed/"+m[1]+"?rel=0";
 if(m=u.match(/vimeo\.com\/(?:video\/)?(\d+)/))return "https://player.vimeo.com/video/"+m[1];
@@ -183,12 +184,21 @@ if(!ls)return h+'<p class="sub">'+T("Loading…","লোড হচ্ছে…")
 if(!ls.length)return h+'<p>'+T("No lessons yet. Please check back soon.","এখনো কোনো লেসন নেই। শীঘ্রই আসছে।")+'</p></div></section>';
 var c=norm().filter(function(x){return x.id===L.id;})[0],a=ls[L.act]||ls[0],u=L.vid[a.id],n=ls.length,d=ls.filter(function(x){return L.done[x.id];}).length;
 return h+'<h2>'+(c?T(c.e,c.b):"")+'</h2><div class="pb"><i style="width:'+Math.round(d*100/n)+'%"></i></div><p class="sub">'+d+' / '+n+' '+T("lessons completed","লেসন সম্পন্ন")+'</p><div class="lg"><div><div class="vid">'+(u?'<iframe src="'+embed(u)+'" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>':'<span>🔒 '+T("Locked","লক করা")+'</span>')+'</div><h3>'+T(a.title_en,a.title_bn)+'</h3><button class="btn" data-a="done">'+(L.done[a.id]?'✓ '+T("Completed","সম্পন্ন"):T("Mark as completed","সম্পন্ন করুন"))+'</button></div><ol class="ll">'+ls.map(function(x,i){return '<li><button class="lb'+(i===L.act?' on':'')+'" data-a="les" data-i="'+i+'">'+(L.done[x.id]?'✓ ':'')+(i+1)+'. '+T(x.title_en,x.title_bn)+'</button></li>';}).join("")+'</ol></div></div></section>';}
+function loadStats(){
+Promise.all([sb.from("profiles").select("id",{count:"exact",head:true}),sb.from("payments").select("id,status,created_at,method,courses(title_en,price),profiles(full_name)").order("created_at",{ascending:false}),sb.from("enrollments").select("user_id",{count:"exact",head:true})]).then(function(a){
+var p=a[1].data||[],ok=p.filter(function(x){return x.status==="approved";}),m=new Date().toISOString().slice(0,7);
+var sum=function(l){return l.reduce(function(t,x){return t+(x.courses?x.courses.price:0);},0);};
+ST={students:a[0].count||0,enr:a[2].count||0,orders:ok.length,rev:sum(ok),month:sum(ok.filter(function(x){return x.created_at.slice(0,7)===m;})),pend:p.filter(function(x){return x.status==="pending";}).length,recent:p.slice(0,10)};
+render();});}
 function loadAdmin(){sb.from("courses").select("id,title_en,price,published").order("created_at").then(function(r){AC=r.data||[];render();});}
 function admin(){
 if(!adm)return '<section><div class="wrap pg"><p>'+T("Admin only.","শুধু অ্যাডমিনের জন্য।")+'</p></div></section>';
 function f(id,lb,ph,t){return '<label>'+lb+'<input id="'+id+'" data-keep placeholder="'+(ph||"")+'"'+(t?' type="'+t+'"':"")+'></label>';}
+var s=ST&&ST.recent?ST:null;
+function box(l,v){return '<div class="stp"><small>'+l+'</small><h3 style="font-size:24px;margin:4px 0 0">'+v+'</h3></div>';}
+var dash=s?'<div class="hd"><h3 style="margin:0">Dashboard</h3><button class="ghost" data-a="rst">Refresh</button></div><div class="g" style="margin-bottom:18px">'+box("Students (accounts)",s.students)+box("Enrollments",s.enr)+box("Paid orders",s.orders)+box("Total earned","৳ "+s.rev)+box("This month","৳ "+s.month)+box("Pending payments",s.pend)+'</div><div class="stp" style="margin-bottom:18px;overflow-x:auto"><h3>Recent orders</h3><table style="width:100%;border-collapse:collapse;min-width:420px"><tr style="text-align:left;color:var(--mu)"><th>Date</th><th>Student</th><th>Course</th><th>৳</th><th>Status</th></tr>'+(s.recent.length?s.recent.map(function(x){return '<tr style="border-top:1px solid var(--ln)"><td>'+x.created_at.slice(0,10)+'</td><td>'+((x.profiles&&x.profiles.full_name)||"-")+'</td><td>'+(x.courses?x.courses.title_en:"-")+'</td><td>'+(x.courses?x.courses.price:"")+'</td><td>'+x.status+'</td></tr>';}).join(""):'<tr><td colspan="5">No orders yet.</td></tr>')+'</table></div>':'<p class="sub">Loading dashboard…</p>';
 var cs=AC||[];
-return '<section><div class="wrap pg"><h2>Admin</h2><div class="stp"><h3>1. '+T("Add course","কোর্স যোগ করুন")+'</h3>'+f("a-slug","Slug","online-business-mastery")+f("a-en","Title (English)")+f("a-bn","শিরোনাম (বাংলা)")+f("a-desc","Description (English)")+'<label>Category<select id="a-cat" data-keep>'+CATS.map(function(k){return '<option>'+k[1]+'</option>';}).join("")+'</select></label>'+f("a-price","Price (0 = free)","0","number")+'<label><input type="checkbox" id="a-pub" data-keep style="width:auto"> Published</label><button class="btn" data-a="addc">Save course</button><p id="am1"></p></div><div class="stp" style="margin-top:18px"><h3>2. '+T("Add lesson","লেসন যোগ করুন")+'</h3><label>Course<select id="l-course" data-keep>'+cs.map(function(c){return '<option value="'+c.id+'">'+c.title_en+' ('+(c.price>0?"paid":"free")+(c.published?"":", draft")+')</option>';}).join("")+'</select></label>'+f("l-en","Lesson title (English)")+f("l-bn","লেসনের নাম (বাংলা)")+f("l-url","Video link (YouTube / Vimeo / Bunny embed)")+f("l-pos","Lesson number (leave empty = next)","","number")+'<label><input type="checkbox" id="l-prev" data-keep style="width:auto"> Free preview lesson</label><button class="btn" data-a="addl">Save lesson</button><p id="am2"></p></div></div></section>';}
+return '<section><div class="wrap pg"><h2>Admin</h2>'+dash+'<div class="stp"><h3>1. '+T("Add course","কোর্স যোগ করুন")+'</h3>'+f("a-slug","Slug","online-business-mastery")+f("a-en","Title (English)")+f("a-bn","শিরোনাম (বাংলা)")+f("a-desc","Description (English)")+'<label>Category<select id="a-cat" data-keep>'+CATS.map(function(k){return '<option>'+k[1]+'</option>';}).join("")+'</select></label>'+f("a-price","Price (0 = free)","0","number")+'<label><input type="checkbox" id="a-pub" data-keep style="width:auto"> Published</label><button class="btn" data-a="addc">Save course</button><p id="am1"></p></div><div class="stp" style="margin-top:18px"><h3>2. '+T("Add lesson","লেসন যোগ করুন")+'</h3><label>Course<select id="l-course" data-keep>'+cs.map(function(c){return '<option value="'+c.id+'">'+c.title_en+' ('+(c.price>0?"paid":"free")+(c.published?"":", draft")+')</option>';}).join("")+'</select></label>'+f("l-en","Lesson title (English)")+f("l-bn","লেসনের নাম (বাংলা)")+f("l-url","Video link (YouTube / Vimeo / Bunny embed)")+f("l-pos","Lesson number (leave empty = next)","","number")+'<label><input type="checkbox" id="l-prev" data-keep style="width:auto"> Free preview lesson</label><button class="btn" data-a="addl">Save lesson</button><p id="am2"></p></div></div></section>';}
 function addCourse(){var v=function(i){return document.getElementById(i);},m=v("am1");
 var row={slug:v("a-slug").value.trim(),title_en:v("a-en").value.trim(),title_bn:v("a-bn").value.trim(),desc_en:v("a-desc").value.trim(),category:v("a-cat").value,price:parseInt(v("a-price").value||"0",10),published:v("a-pub").checked};
 if(!row.slug||!row.title_en||!row.title_bn){m.textContent="Fill the slug and both titles.";return;}
@@ -223,6 +233,7 @@ var v=view(),nav=[["home","Home","হোম"],["courses","Courses","কোর্
 document.documentElement.lang=lang;if(user)nav.push(["dashboard","My Courses","আমার কোর্স"]);if(adm)nav.push(["admin","Admin","অ্যাডমিন"]);
 var hh=location.hash.slice(1);if(v==="learn"&&sb&&user&&L.id!==hh.slice(6)){L={id:hh.slice(6),lessons:null,done:{},act:0,vid:{}};learnLoad(L.id);}
 if(v==="admin"&&AC===null&&sb){AC=[];loadAdmin();}
+if(v==="admin"&&ST===null&&sb){ST={};loadStats();}
 var kept={};document.querySelectorAll("#main [data-keep]").forEach(function(e){kept[e.id]=e.type==="checkbox"?e.checked:e.value;});
 document.title=T("Sohoz Learning","সহজ লার্নিং");
 document.getElementById("hdr").innerHTML='<a class="logo" href="#home">Sohoz<b>Learning</b></a><div class="hr"><button class="lang" data-a="lang">'+T("বাংলা","English")+'</button><button class="burger" data-a="menu" aria-label="Menu" aria-expanded="'+open+'">☰</button></div><div id="menu" class="'+(open?"open":"")+'"><nav>'+nav.map(function(n){return '<a href="#'+n[0]+'"'+(v===n[0]?' aria-current="page"':"")+'>'+T(n[1],n[2])+'</a>';}).join("")+'</nav><div class="act">'+(user?'<button class="ghost" data-a="logout">'+T("Log out","লগআউট")+'</button>':'<button class="ghost" data-a="login">'+T("Log in","লগইন")+'</button><button class="btn" data-a="signup">'+T("Sign up","সাইন আপ")+'</button>')+'</div></div>';
@@ -253,6 +264,7 @@ else if(a==="done"){var ls=L.lessons||[],cur=ls[L.act];if(!cur||!user)return;
 sb.from("progress").upsert({user_id:user.id,lesson_id:cur.id}).then(function(r){if(!r.error){L.done[cur.id]=1;if(L.act<ls.length-1)L.act++;render();}});}
 else if(a==="addc"){addCourse();}
 else if(a==="addl"){addLesson();}
+else if(a==="rst"){ST=null;render();}
 });
 window.addEventListener("hashchange",function(){open=false;render();window.scrollTo(0,0);});
 try{var cc=JSON.parse(localStorage.getItem("sl-c")||"null");if(cc&&cc.length)live=cc;}catch(e){}

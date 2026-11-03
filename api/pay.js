@@ -26,12 +26,12 @@ module.exports = async (req, res) => {
       .select("course_id").eq("user_id", user.id).eq("course_id", course.id);
     if (have && have.length) return res.status(400).json({ error: "You already have this course." });
 
-    const invoice = "SL" + Date.now() + Math.floor(Math.random() * 900 + 100);
+    const invoice = String(Date.now()) + String(Math.floor(Math.random() * 900 + 100)); // digits only
     const ins = await admin.from("payments").insert({
       user_id: user.id, course_id: course.id, method: "paystation",
       invoice_number: invoice, status: "pending"
-    });
-    if (ins.error) return res.status(500).json({ error: "Could not start payment." });
+    }).select("id").single();
+    if (ins.error || !ins.data) return res.status(500).json({ error: "Could not start payment." });
 
     const site = process.env.SITE_URL || "https://" + req.headers.host;
     const f = new FormData();
@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
     f.append("invoice_number", invoice);
     f.append("currency", "BDT");
     f.append("payment_amount", String(course.price));
-    f.append("reference", course.title_en);
+    f.append("reference", ins.data.id);
     f.append("cust_name", String(name).slice(0, 80));
     f.append("cust_phone", phone);
     f.append("cust_email", String(email).slice(0, 120));

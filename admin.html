@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Owner panel</title>
+<style>
+:root{--bg:#F5F8FA;--sf:#fff;--ink:#14263F;--mu:#55657A;--ln:#D9E1E8;--jd:#0E8F6E;--jk:#fff;color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#0C1522;--sf:#14223A;--ink:#EAF0F6;--mu:#9DB0C4;--ln:#26385A;--jd:#2CC59B;--jk:#06251D;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,"Hind Siliguri","Noto Sans Bengali",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.top b{font-size:20px}
+h2,h3{margin:0 0 10px}
+.box{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:18px;margin-bottom:18px}
+.g{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:18px}
+.g .box{margin:0}.g small{color:var(--mu)}.g h3{font-size:24px;margin:2px 0 0}
+label{display:block;margin-bottom:10px;font-weight:500}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-top:4px}
+input[type=checkbox]{width:auto;margin-right:6px}
+.btn,.ghost{border-radius:10px;padding:9px 18px;font:inherit;font-weight:600;border:1px solid transparent;cursor:pointer}
+.btn{background:var(--jd);color:var(--jk)}.ghost{background:none;border-color:var(--ln);color:var(--ink)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:460px}
+th{text-align:left;color:var(--mu);font-weight:600}td,th{padding:6px 8px;border-top:1px solid var(--ln)}
+td input[type=number]{width:90px;margin:0}td input[type=checkbox]{margin:0}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;display:none;z-index:9}
+.lg{max-width:380px;margin:60px auto}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var SB_URL="https://yrdscpfzoisubgfokfib.supabase.co",SB_KEY="sb_publishable_Q0sQmhTx9Xoo84Nqbnf38w_-n4krwf-";
+var sb=window.supabase.createClient(SB_URL,SB_KEY),app=document.getElementById("app"),AC=[],ST=null;
+var CATS=["Business","Freelancing","Digital Marketing","English & Skills","Computer & IT","Career"];
+function esc(x){return String(x==null?"":x).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function $(i){return document.getElementById(i);}
+function toast(t){var e=$("toast");e.textContent=t;e.style.display="block";setTimeout(function(){e.style.display="none";},3000);}
+function loginView(msg){
+app.innerHTML='<div class="box lg"><h2>Owner login</h2><label>Email<input id="em" type="email" autocomplete="username"></label><label>Password<input id="pw" type="password" autocomplete="current-password"></label><button class="btn" id="go" style="width:100%">Log in</button><p id="msg" style="color:var(--mu)">'+esc(msg||"")+'</p></div>';
+$("go").onclick=function(){$("msg").textContent="…";
+sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}).then(function(r){if(r.error){$("msg").textContent=r.error.message;return;}start();});};}
+function denied(){app.innerHTML='<div class="box lg"><h2>Not allowed</h2><p>This account is not the site owner.</p><button class="ghost" data-a="out">Log out</button></div>';}
+function start(){
+sb.auth.getSession().then(function(r){var s=r.data.session;if(!s)return loginView();
+return sb.from("profiles").select("is_admin").eq("id",s.user.id).then(function(q){
+if(q.data&&q.data[0]&&q.data[0].is_admin){load().then(draw);}else{denied();}});});}
+function load(){return Promise.all([
+sb.from("courses").select("id,title_en,price,published").order("created_at"),
+sb.from("payments").select("id,status,created_at,courses(title_en,price),profiles(full_name)").order("created_at",{ascending:false}),
+sb.from("profiles").select("id",{count:"exact",head:true}),
+sb.from("enrollments").select("user_id",{count:"exact",head:true})]).then(function(a){
+AC=a[0].data||[];var p=a[1].data||[],ok=p.filter(function(x){return x.status==="approved";}),m=new Date().toISOString().slice(0,7);
+var sum=function(l){return l.reduce(function(t,x){return t+(x.courses?x.courses.price:0);},0);};
+ST={students:a[2].count||0,enr:a[3].count||0,orders:ok.length,rev:sum(ok),month:sum(ok.filter(function(x){return x.created_at.slice(0,7)===m;})),pend:p.filter(function(x){return x.status==="pending";}).length,recent:p.slice(0,15)};});}
+function box(l,v){return '<div class="box"><small>'+l+'</small><h3>'+v+'</h3></div>';}
+function f(id,lb,ph,t){return '<label>'+lb+'<input id="'+id+'" placeholder="'+(ph||"")+'"'+(t?' type="'+t+'"':"")+'></label>';}
+function draw(){var s=ST;
+app.innerHTML='<div class="top"><b>Owner panel</b><span><button class="ghost" data-a="rf">Refresh</button> <button class="ghost" data-a="out">Log out</button></span></div>'
++'<div class="g">'+box("Students (accounts)",s.students)+box("Enrollments",s.enr)+box("Paid orders",s.orders)+box("Total earned","৳ "+s.rev)+box("This month","৳ "+s.month)+box("Pending payments",s.pend)+'</div>'
++'<div class="box tw"><h3>Recent orders</h3><table><tr><th>Date</th><th>Student</th><th>Course</th><th>৳</th><th>Status</th></tr>'+(s.recent.length?s.recent.map(function(x){return '<tr><td>'+x.created_at.slice(0,10)+'</td><td>'+esc((x.profiles&&x.profiles.full_name)||"-")+'</td><td>'+esc(x.courses?x.courses.title_en:"-")+'</td><td>'+(x.courses?x.courses.price:"")+'</td><td>'+x.status+'</td></tr>';}).join(""):'<tr><td colspan="5">No orders yet.</td></tr>')+'</table></div>'
++'<div class="box tw"><h3>Your courses</h3><table><tr><th>Course</th><th>Price ৳</th><th>Published</th><th></th></tr>'+AC.map(function(c){return '<tr><td>'+esc(c.title_en)+'</td><td><input type="number" id="p-'+c.id+'" value="'+c.price+'"></td><td><input type="checkbox" id="u-'+c.id+'"'+(c.published?" checked":"")+'></td><td><button class="ghost" data-a="savec" data-id="'+c.id+'">Save</button></td></tr>';}).join("")+'</table></div>'
++'<div class="box"><h3>Add course</h3>'+f("a-slug","Slug (small letters, dashes)","online-business-mastery")+f("a-en","Title (English)")+f("a-bn","শিরোনাম (বাংলা)")+f("a-desc","Description (English)")+'<label>Category<select id="a-cat">'+CATS.map(function(k){return '<option>'+k+'</option>';}).join("")+'</select></label>'+f("a-price","Price (0 = free)","0","number")+'<label><input type="checkbox" id="a-pub">Published</label><button class="btn" data-a="addc">Save course</button></div>'
++'<div class="box"><h3>Add lesson</h3><label>Course<select id="l-course">'+AC.map(function(c){return '<option value="'+c.id+'">'+esc(c.title_en)+'</option>';}).join("")+'</select></label>'+f("l-en","Lesson title (English)")+f("l-bn","লেসনের নাম (বাংলা)")+f("l-url","Video link (YouTube / Vimeo / Bunny embed)")+f("l-pos","Lesson number (empty = next)","","number")+'<label><input type="checkbox" id="l-prev">Free preview lesson</label><button class="btn" data-a="addl">Save lesson</button></div>';}
+function refresh(msg){load().then(function(){draw();if(msg)toast(msg);});}
+function addCourse(){
+var row={slug:$("a-slug").value.trim(),title_en:$("a-en").value.trim(),title_bn:$("a-bn").value.trim(),desc_en:$("a-desc").value.trim(),category:$("a-cat").value,price:parseInt($("a-price").value||"0",10),published:$("a-pub").checked};
+if(!row.slug||!row.title_en||!row.title_bn){toast("Fill the slug and both titles.");return;}
+sb.from("courses").insert(row).then(function(r){if(r.error){toast(r.error.message);return;}refresh("Course saved ✓");});}
+function addLesson(){
+var cid=$("l-course").value,url=$("l-url").value.trim(),te=$("l-en").value.trim(),tb=$("l-bn").value.trim();
+if(!cid||!url||!te||!tb){toast("Fill the course, both titles and the video link.");return;}
+var pos=parseInt($("l-pos").value,10),prev=$("l-prev").checked;
+var p=pos?Promise.resolve(pos):sb.from("lessons").select("position").eq("course_id",cid).order("position",{ascending:false}).limit(1).then(function(r){return r.data&&r.data[0]?r.data[0].position+1:1;});
+p.then(function(n){return sb.from("lessons").insert({course_id:cid,position:n,title_en:te,title_bn:tb,is_preview:prev}).select("id").single();}).then(function(r){
+if(r.error){toast(r.error.message);return;}
+return sb.from("lesson_videos").insert({lesson_id:r.data.id,video_url:url}).then(function(x){if(x.error){toast(x.error.message);return;}$("l-en").value="";$("l-bn").value="";$("l-url").value="";$("l-pos").value="";toast("Lesson saved ✓");});});}
+document.addEventListener("click",function(e){var el=e.target.closest("[data-a]");if(!el)return;var a=el.getAttribute("data-a");
+if(a==="out"){sb.auth.signOut().then(function(){loginView();});}
+else if(a==="rf"){refresh("Updated");}
+else if(a==="addc"){addCourse();}
+else if(a==="addl"){addLesson();}
+else if(a==="savec"){var id=el.getAttribute("data-id");
+sb.from("courses").update({price:parseInt($("p-"+id).value||"0",10),published:$("u-"+id).checked}).eq("id",id).then(function(r){if(r.error){toast(r.error.message);return;}refresh("Saved ✓");});}});
+start();
+</script>
+</body>
+</html>

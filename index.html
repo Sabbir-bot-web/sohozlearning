@@ -272,8 +272,8 @@ if(sb){
 sb.auth.getSession().then(function(r){user=r.data.session?r.data.session.user:null;loadData();});
 sb.auth.onAuthStateChange(function(ev,sess){var u=sess?sess.user:null;if((u&&u.id)!==(user&&user.id)){user=u;setTimeout(loadData,0);}});
 }
-var pq=new URLSearchParams(location.search).get("pay");
-if(pq){history.replaceState(null,"",location.pathname+location.hash);setTimeout(function(){alert(pq==="ok"?T("Payment successful! Your course is now open.","পেমেন্ট সফল! আপনার কোর্স এখন খোলা।"):T("Payment was not completed. Please try again.","পেমেন্ট সম্পন্ন হয়নি। আবার চেষ্টা করুন।"));},600);}
+var pq=new URLSearchParams(location.search).get("pay"),pw=new URLSearchParams(location.search).get("why");
+if(pq){history.replaceState(null,"",location.pathname+location.hash);setTimeout(function(){alert((pq==="ok"?T("Payment successful! Your course is now open.","পেমেন্ট সফল! আপনার কোর্স এখন খোলা।"):T("Payment was not completed. Please try again.","পেমেন্ট সম্পন্ন হয়নি। আবার চেষ্টা করুন।"))+(pw?" ["+pw+"]":""));},600);}
 render();
 })();
 </script>

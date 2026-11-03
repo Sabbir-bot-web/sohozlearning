@@ -133,7 +133,7 @@ var C=[
 function norm(){if(live&&live.length)return live;if(sb)return [];return C.map(function(c){return {e:c[0],b:c[1],price:c[2]?1:0,k:c[3]};});}
 function card(c){var k=CATS[c.k],p=c.price>0,have=c.id&&mine.indexOf(c.id)>-1;
 return '<article class="card"><div class="th" style="--h:'+k[3]+'" aria-hidden="true">'+k[0]+'<span class="tag'+(p?' p':'')+'">'+(p?T("Paid","পেইড"):T("Free","ফ্রি"))+'</span></div><div class="cb"><small>'+T(k[1],k[2])+'</small><h3>'+T(c.e,c.b)+'</h3><div class="row"><span class="pr">'+(p?(c.id?"৳ "+c.price:"৳ 0,000"):T("Free","ফ্রি"))+'</span>'+(have?'<a class="btn" href="#learn-'+c.id+'">'+T("Learn","শিখুন")+'</a>':'<button class="btn" data-a="enroll" data-id="'+(c.id||"")+'">'+(p?T("Enroll","ভর্তি হোন"):T("Start free","ফ্রি শুরু"))+'</button>')+'</div></div></article>';}
-function view(){var h=location.hash.slice(1);if(h.indexOf("learn-")===0)return "learn";if(h==="admin"&&adm)return "admin";return h==="courses"||h==="about"||h==="contact"||h==="dashboard"?h:"home";}
+function view(){var h=location.hash.slice(1);if(h.indexOf("learn-")===0)return "learn";return h==="courses"||h==="about"||h==="contact"||h==="dashboard"?h:"home";}
 function dashboard(){
 var h='<section><div class="wrap"><h2>'+T("My Courses","আমার কোর্স")+'</h2>';
 if(!user)return h+'<p class="sub">'+T("Please log in to see your courses.","আপনার কোর্স দেখতে লগইন করুন।")+'</p><button class="btn" data-a="login">'+T("Log in","লগইন")+'</button></div></section>';
@@ -160,7 +160,7 @@ function loadData(){if(!sb)return;
 sb.from("courses").select("id,slug,title_en,title_bn,category,price").eq("published",true).order("created_at").then(function(r){
 if(r.error){lerr=r.error.message;}if(!r.error&&r.data){lerr="";live=r.data.map(function(c){var k=0;CATS.forEach(function(x,i){if(x[1]===c.category)k=i;});return {id:c.id,e:c.title_en,b:c.title_bn,price:c.price,k:k};});try{localStorage.setItem("sl-c",JSON.stringify(live));}catch(e){}}
 if(!user){mine=[];adm=false;ST=null;return;}
-return Promise.all([sb.from("enrollments").select("course_id"),sb.from("profiles").select("is_admin").eq("id",user.id)]).then(function(a){mine=a[0].data?a[0].data.map(function(x){return x.course_id;}):[];adm=!!(a[1].data&&a[1].data[0]&&a[1].data[0].is_admin);});
+return Promise.all([sb.from("enrollments").select("course_id").eq("user_id",user.id),sb.from("profiles").select("is_admin").eq("id",user.id)]).then(function(a){mine=a[0].data?a[0].data.map(function(x){return x.course_id;}):[];adm=!!(a[1].data&&a[1].data[0]&&a[1].data[0].is_admin);});
 }).then(render);}
 function grid(l){return l.length?l.map(card).join(""):'<p class="sub">'+(lerr?T("Could not load courses: ","কোর্স লোড হয়নি: ")+lerr:sb&&live===null?T("Loading…","লোড হচ্ছে…"):T("No courses yet.","এখনো কোনো কোর্স নেই।"))+'</p>';}
 function embed(u){var m;
@@ -230,7 +230,7 @@ function authHTML(){if(pay)return payHTML();var l=mode==="login";
 return '<button class="x" data-a="close" aria-label="Close">✕</button><div class="tabs"><button data-a="login" class="'+(l?"on":"")+'">'+T("Log in","লগইন")+'</button><button data-a="signup" class="'+(l?"":"on")+'">'+T("Sign up","সাইন আপ")+'</button></div>'+(l?"":'<label>'+T("Name","নাম")+'<input autocomplete="name"></label>')+'<label>'+T("Email","ইমেইল")+'<input type="email" autocomplete="email"></label><label>'+T("Password","পাসওয়ার্ড")+'<input type="password" autocomplete="current-password"></label><button class="btn" style="width:100%" data-a="submit">'+(l?T("Log in","লগইন করুন"):T("Create account","অ্যাকাউন্ট খুলুন"))+'</button><p id="msg"></p>';}
 function render(){
 var v=view(),nav=[["home","Home","হোম"],["courses","Courses","কোর্স"],["about","About","আমাদের সম্পর্কে"],["contact","Contact","যোগাযোগ"]];
-document.documentElement.lang=lang;if(user)nav.push(["dashboard","My Courses","আমার কোর্স"]);if(adm)nav.push(["admin","Admin","অ্যাডমিন"]);
+document.documentElement.lang=lang;if(user)nav.push(["dashboard","My Courses","আমার কোর্স"]);
 var hh=location.hash.slice(1);if(v==="learn"&&sb&&user&&L.id!==hh.slice(6)){L={id:hh.slice(6),lessons:null,done:{},act:0,vid:{}};learnLoad(L.id);}
 if(v==="admin"&&AC===null&&sb){AC=[];loadAdmin();}
 if(v==="admin"&&ST===null&&sb){ST={};loadStats();}

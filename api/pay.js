@@ -3,13 +3,8 @@ const { createClient } = require("@supabase/supabase-js");
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
   try {
-    const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
-    const token = (req.headers.authorization || "").replace("Bearer ", "");
-    const { data: u } = await admin.auth.getUser(token);
-    const user = u && u.user;
-    if (!user) return res.status(401).json({ error: "Please log in first." });
-
     const { course_id, phone, name, email } = req.body || {};
+    // quick checks first, before any network call
     if (!/^01\d{9}$/.test(phone || "")) {
       return res.status(400).json({ error: "Enter a valid phone number like 01XXXXXXXXX." });
     }
@@ -17,21 +12,33 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Enter your name and a valid email." });
     }
 
+    const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
+    const token = (req.headers.authorization || "").replace("Bearer ", "");
+
+    // user check and course lookup run at the same time (faster)
+    const [ur, cr] = await Promise.all([
+      admin.auth.getUser(token),
+      admin.from("courses").select("id,price,title_en").eq("id", course_id).eq("published", true).single()
+    ]);
+    const user = ur.data && ur.data.user;
+    if (!user) return res.status(401).json({ error: "Please log in first." });
+    const course = cr.data;
     // price always comes from the database, never from the browser
-    const { data: course } = await admin.from("courses")
-      .select("id,price,title_en").eq("id", course_id).eq("published", true).single();
     if (!course || course.price <= 0) return res.status(400).json({ error: "Course not found." });
 
-    const { data: have } = await admin.from("enrollments")
-      .select("course_id").eq("user_id", user.id).eq("course_id", course.id);
-    if (have && have.length) return res.status(400).json({ error: "You already have this course." });
-
     const invoice = String(Date.now()) + String(Math.floor(Math.random() * 900 + 100)); // digits only
-    const ins = await admin.from("payments").insert({
-      user_id: user.id, course_id: course.id, method: "paystation",
-      invoice_number: invoice, status: "pending"
-    }).select("id").single();
+    const [have, ins] = await Promise.all([
+      admin.from("enrollments").select("course_id").eq("user_id", user.id).eq("course_id", course.id),
+      admin.from("payments").insert({
+        user_id: user.id, course_id: course.id, method: "paystation",
+        invoice_number: invoice, status: "pending"
+      }).select("id").single()
+    ]);
     if (ins.error || !ins.data) return res.status(500).json({ error: "Could not start payment." });
+    if (have.data && have.data.length) {
+      await admin.from("payments").delete().eq("id", ins.data.id);
+      return res.status(400).json({ error: "You already have this course." });
+    }
 
     const site = process.env.SITE_URL || "https://" + req.headers.host;
     const f = new FormData();

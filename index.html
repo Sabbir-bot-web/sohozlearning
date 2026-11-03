@@ -119,7 +119,7 @@ img,iframe{max-width:100%}
 var SB_URL="https://yrdscpfzoisubgfokfib.supabase.co";
 var SB_KEY="sb_publishable_Q0sQmhTx9Xoo84Nqbnf38w_-n4krwf-";
 (function(){
-var lang="en",mode="login",flt="all",open=false,user=null,live=null,mine=[],pay=null,adm=false,AC=null,L={},lerr="",ST=null,sb=(window.supabase&&/^https?:/.test(SB_URL))?window.supabase.createClient(SB_URL,SB_KEY):null;
+var lang="en",mode="login",flt="all",open=false,user=null,live=null,mine=[],pay=null,adm=false,AC=null,L={},lerr="",ST=null,VF=0,sb=(window.supabase&&/^https?:/.test(SB_URL))?window.supabase.createClient(SB_URL,SB_KEY):null;
 try{var s=localStorage.getItem("sl-lang");if(s==="bn"||s==="en")lang=s;}catch(e){}
 function T(e,b){return lang==="bn"?b:e;}
 var CATS=[["💼","Business","ব্যবসা",160],["💻","Freelancing","ফ্রিল্যান্সিং",210],["📣","Digital Marketing","ডিজিটাল মার্কেটিং",340],["🗣️","English & Skills","ইংরেজি ও স্কিল",30],["🖥️","Computer & IT","কম্পিউটার ও আইটি",250],["🎯","Career","ক্যারিয়ার",280]];
@@ -145,23 +145,24 @@ return '<button class="x" data-a="close" aria-label="Close">✕</button><h3 styl
 function doSubmit(){
 var d=document.getElementById("dlg"),ins=d.querySelectorAll("input"),msg=d.querySelector("#msg");
 if(!sb){msg.textContent=T("Not connected yet. Add the Supabase keys in index.html.","এখনো সংযুক্ত নয়। index.html-এ Supabase কী যোগ করুন।");return;}
-if(pay){var ph=ins[2].value.trim(),nm=ins[0].value.trim(),em=ins[1].value.trim();msg.textContent="…";
+if(pay){var ph=ins[2].value.trim(),nm=ins[0].value.trim(),em=ins[1].value.trim(),b=d.querySelector('button[data-a="submit"]');b.disabled=true;msg.textContent=T("Opening the secure payment page, please wait…","পেমেন্ট পেজ খুলছে, একটু অপেক্ষা করুন…");
 sb.auth.getSession().then(function(x){var t=x.data.session&&x.data.session.access_token;
 return fetch("/api/pay",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({course_id:pay.id,phone:ph,name:nm,email:em})});})
-.then(function(r){return r.json();}).then(function(j){if(j.url){location.href=j.url;}else{msg.textContent=j.error||T("Payment error.","পেমেন্টে সমস্যা।");}})
-.catch(function(){msg.textContent=T("Network error.","নেটওয়ার্ক সমস্যা।");});return;}
+.then(function(r){return r.json();}).then(function(j){if(j.url){location.href=j.url;}else{b.disabled=false;msg.textContent=j.error||T("Payment error.","পেমেন্টে সমস্যা।");}})
+.catch(function(){b.disabled=false;msg.textContent=T("Network error.","নেটওয়ার্ক সমস্যা।");});return;}
 var l=mode==="login",em=ins[l?0:1].value.trim(),pw=ins[l?1:2].value;
 var p=l?sb.auth.signInWithPassword({email:em,password:pw}):sb.auth.signUp({email:em,password:pw,options:{data:{full_name:ins[0].value.trim()}}});
 msg.textContent="…";
 p.then(function(r){if(r.error){msg.textContent=r.error.message;return;}
 if(!l&&!r.data.session){msg.textContent=T("Check your email to confirm your account.","অ্যাকাউন্ট নিশ্চিত করতে আপনার ইমেইল দেখুন।");return;}
 d.close();});}
+function verify(){sb.auth.getSession().then(function(x){var t=x.data.session&&x.data.session.access_token;if(!t)return;return fetch("/api/verify",{headers:{Authorization:"Bearer "+t}}).then(function(r){return r.json();}).then(function(j){if(j.approved>0)loadData();});}).catch(function(){});}
 function loadData(){if(!sb)return;
 sb.from("courses").select("id,slug,title_en,title_bn,category,price").eq("published",true).order("created_at").then(function(r){
 if(r.error){lerr=r.error.message;}if(!r.error&&r.data){lerr="";live=r.data.map(function(c){var k=0;CATS.forEach(function(x,i){if(x[1]===c.category)k=i;});return {id:c.id,e:c.title_en,b:c.title_bn,price:c.price,k:k};});try{localStorage.setItem("sl-c",JSON.stringify(live));}catch(e){}}
 if(!user){mine=[];adm=false;ST=null;return;}
 return Promise.all([sb.from("enrollments").select("course_id").eq("user_id",user.id),sb.from("profiles").select("is_admin").eq("id",user.id)]).then(function(a){mine=a[0].data?a[0].data.map(function(x){return x.course_id;}):[];adm=!!(a[1].data&&a[1].data[0]&&a[1].data[0].is_admin);});
-}).then(render);}
+}).then(render).then(function(){if(user&&!VF){VF=1;verify();}});}
 function grid(l){return l.length?l.map(card).join(""):'<p class="sub">'+(lerr?T("Could not load courses: ","কোর্স লোড হয়নি: ")+lerr:sb&&live===null?T("Loading…","লোড হচ্ছে…"):T("No courses yet.","এখনো কোনো কোর্স নেই।"))+'</p>';}
 function embed(u){var m;
 if(m=u.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/))return "https://www.youtube.com/embed/"+m[1]+"?rel=0";
@@ -241,7 +242,7 @@ document.getElementById("main").innerHTML={home:home,courses:courses,about:about
 document.getElementById("ftr").innerHTML='<div class="fg"><div><a class="logo" href="#home">Sohoz<b>Learning</b></a><p>'+T("Easy online learning in Bangla and English.","বাংলা ও ইংরেজিতে সহজ অনলাইন শিক্ষা।")+'</p><p>'+T("Pay with bKash, Nagad or card.","বিকাশ, নগদ বা কার্ডে পেমেন্ট।")+'</p></div><div><h4>'+T("Learn","শিখুন")+'</h4><ul><li><a href="#courses">'+T("All courses","সব কোর্স")+'</a></li><li><a href="#courses">'+T("Free courses","ফ্রি কোর্স")+'</a></li></ul></div><div><h4>'+T("Company","কোম্পানি")+'</h4><ul><li><a href="#about">'+T("About us","আমাদের সম্পর্কে")+'</a></li><li><a href="#contact">'+T("Contact","যোগাযোগ")+'</a></li></ul></div><div><h4>'+T("Policies","নীতিমালা")+'</h4><ul><li>'+T("Terms","শর্তাবলী")+'</li><li>'+T("Privacy","গোপনীয়তা")+'</li><li>'+T("Refund","রিফান্ড")+'</li></ul></div></div><div class="cp">© Sohoz Learning · sohozlearning.com</div>';
 var d=document.getElementById("dlg");if(!d.open)d.innerHTML=authHTML();
 }
-function showAuth(){var d=document.getElementById("dlg");d.innerHTML=authHTML();if(!d.open)d.showModal();}
+function showAuth(){var d=document.getElementById("dlg");d.innerHTML=authHTML();if(!d.open)d.showModal();if(pay)fetch("/api/pay").catch(function(){});}
 document.addEventListener("click",function(e){
 var d=document.getElementById("dlg");
 if(e.target===d){d.close();return;}
